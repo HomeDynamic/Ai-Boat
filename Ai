@@ -1,0 +1,51 @@
+import streamlit as st
+from openai import OpenAI
+
+# Page ki setting
+st.set_page_config(page_title="Mera Apna AI", page_icon="🤖")
+st.title("🤖 My Personal ChatGPT")
+
+# 1. OpenAI API Key yahan dalein (Ya user se input lein)
+with st.sidebar:
+    api_key = st.text_input("OpenAI API Key dalein:", type="password")
+    "[API Key yahan se lein](https://platform.openai.com/account/api-keys)"
+
+# 2. Chat history initialize karein (taaki purani baatein yaad rahein)
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# 3. Purani chat screen par dikhayein
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# 4. User input handle karein
+if prompt := st.chat_input("Mujhse kuch bhi puchein..."):
+    if not api_key:
+        st.info("Bhai, pehle API key toh daal do!")
+        st.stop()
+
+    # User ka message save aur display karein
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    # 5. AI se response lein
+    client = OpenAI(api_key=api_key)
+    with st.chat_message("assistant"):
+        response_placeholder = st.empty()
+        full_response = ""
+        
+        # Streaming response (AI ko likhte hue dekhne ke liye)
+        for response in client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=st.session_state.messages,
+            stream=True,
+        ):
+            full_response += (response.choices[0].delta.content or "")
+            response_placeholder.markdown(full_response + "▌")
+        
+        response_placeholder.markdown(full_response)
+
+    # AI ka message save karein
+    st.session_state.messages.append({"role": "assistant", "content": full_response})
