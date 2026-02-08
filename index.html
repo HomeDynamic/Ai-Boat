@@ -1,51 +1,80 @@
-import streamlit as st
-from openai import OpenAI
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mera AI Chatbot</title>
+    <style>
+        /* CSS: Isse hamara interface sundar dikhega */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #343541; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        #chat-container { width: 100%; max-width: 600px; height: 80vh; background: #444654; display: flex; flex-direction: column; border-radius: 10px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        #chat-window { flex: 1; overflow-y: auto; padding: 20px; color: white; }
+        .message { margin-bottom: 15px; padding: 10px 15px; border-radius: 8px; max-width: 80%; line-height: 1.5; }
+        .user { background-color: #0b93f6; align-self: flex-end; margin-left: auto; }
+        .bot { background-color: #40414f; border: 1px solid #565869; }
+        #input-area { display: flex; padding: 20px; background: #343541; border-top: 1px solid #565869; }
+        input { flex: 1; padding: 12px; border: none; border-radius: 5px; background: #40414f; color: white; outline: none; }
+        button { background: #19c37d; color: white; border: none; padding: 10px 20px; margin-left: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #1a8e5f; }
+    </style>
+</head>
+<body>
 
-# Page ki setting
-st.set_page_config(page_title="Mera Apna AI", page_icon="🤖")
-st.title("🤖 My Personal ChatGPT")
+<div id="chat-container">
+    <div id="chat-window">
+        <div class="message bot">Hello! Main aapka AI assistant hoon. Main aaj aapki kya madad kar sakta hoon?</div>
+    </div>
+    <div id="input-area">
+        <input type="text" id="user-input" placeholder="Yahan apna sawal likhein...">
+        <button onclick="sendMessage()">Bhejein</button>
+    </div>
+</div>
 
-# 1. OpenAI API Key yahan dalein (Ya user se input lein)
-with st.sidebar:
-    api_key = st.text_input("OpenAI API Key dalein:", type="password")
-    "[API Key yahan se lein](https://platform.openai.com/account/api-keys)"
+<script>
+    /* JS: Isse chatbot kaam karega */
+    async function sendMessage() {
+        const inputField = document.getElementById('user-input');
+        const chatWindow = document.getElementById('chat-window');
+        const message = inputField.value.trim();
 
-# 2. Chat history initialize karein (taaki purani baatein yaad rahein)
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+        if (message === "") return;
 
-# 3. Purani chat screen par dikhayein
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+        // User ka message display karein
+        appendMessage('user', message);
+        inputField.value = "";
 
-# 4. User input handle karein
-if prompt := st.chat_input("Mujhse kuch bhi puchein..."):
-    if not api_key:
-        st.info("Bhai, pehle API key toh daal do!")
-        st.stop()
+        // API Call (Yahan aapko apni real API use karni hogi)
+        // Note: Real apps mein API key frontend pe nahi rakhte, ye sirf seekhne ke liye hai.
+        try {
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer YOUR_OPENAI_API_KEY' // <--- Apni key yahan dalein
+                },
+                body: JSON.stringify({
+                    model: "gpt-3.5-turbo",
+                    messages: [{role: "user", content: message}]
+                })
+            });
 
-    # User ka message save aur display karein
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
+            const data = await response.json();
+            const botReply = data.choices[0].message.content;
+            appendMessage('bot', botReply);
+        } catch (error) {
+            appendMessage('bot', "Error: API connect nahi ho payi. Check karein key sahi hai ya nahi.");
+        }
+    }
 
-    # 5. AI se response lein
-    client = OpenAI(api_key=api_key)
-    with st.chat_message("assistant"):
-        response_placeholder = st.empty()
-        full_response = ""
-        
-        # Streaming response (AI ko likhte hue dekhne ke liye)
-        for response in client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=st.session_state.messages,
-            stream=True,
-        ):
-            full_response += (response.choices[0].delta.content or "")
-            response_placeholder.markdown(full_response + "▌")
-        
-        response_placeholder.markdown(full_response)
+    function appendMessage(sender, text) {
+        const chatWindow = document.getElementById('chat-window');
+        const msgDiv = document.createElement('div');
+        msgDiv.classList.add('message', sender);
+        msgDiv.innerText = text;
+        chatWindow.appendChild(msgDiv);
+        chatWindow.scrollTop = chatWindow.scrollHeight; // Auto scroll to bottom
+    }
+</script>
 
-    # AI ka message save karein
-    st.session_state.messages.append({"role": "assistant", "content": full_response})
+</body>
+</html>
